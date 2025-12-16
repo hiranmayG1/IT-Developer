@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hiranmany Kanban Board</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <link rel="stylesheet" href="style.css">
+</head>
+<body class="text-gray-800">
+
+    <div id="toast-container"></div>
+    <div id="app" class="h-screen flex flex-col">
+        <div id="auth-view" class="flex-grow flex items-center justify-center p-4">
+            <div class="w-full max-w-md p-8 space-y-8 rounded-2xl shadow-2xl auth-card">
+                <div class="text-center">
+                    <h2 class="text-4xl font-bold text-gray-900">HFlow</h2>
+                    <p class="mt-2 text-gray-600">Your project's new home.</p>
+                </div>
+                <div class="mt-8 space-y-6">
+                    <p class="text-sm text-center text-gray-700">Authentication is handled automatically. You will be signed in with a temporary anonymous account.</p>
+                    <button id="enter-app-btn" class="w-full py-3 px-4 modern-btn primary" disabled>
+                        Loading...
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="board-selection-view" class="hidden flex-grow flex items-center justify-center p-4">
+             <div class="w-full max-w-2xl p-8 space-y-6 auth-card rounded-2xl shadow-2xl">
+                <div class="text-center">
+                    <h2 class="text-3xl font-bold text-gray-900">Select or Create a Board</h2>
+                    <p class="text-gray-600 mt-2">Create a new board or join one using an ID.</p>
+                    <p class="text-xs text-gray-500 mt-4">Your User ID: <code id="user-id-display" class="bg-gray-200/50 p-1 rounded"></code></p>
+                </div>
+                <div class="grid md:grid-cols-2 gap-8 pt-4">
+                    <div class="space-y-4">
+                        <h3 class="text-xl font-semibold text-gray-800 text-center">Create a New Board</h3>
+                        <input type="text" id="new-board-name" placeholder="Board Name" class="w-full px-4 py-2 border rounded-md focus:outline-none modern-input">
+                        <button id="create-board-btn" class="w-full modern-btn primary">Create Board</button>
+                    </div>
+                    <div class="space-y-4">
+                        <h3 class="text-xl font-semibold text-gray-800 text-center">Join an Existing Board</h3>
+                        <input type="text" id="join-board-id" placeholder="Board ID" class="w-full px-4 py-2 border rounded-md focus:outline-none modern-input">
+                        <button id="join-board-btn" class="w-full modern-btn green">Join Board</button>
+                    </div>
+                </div>
+             </div>
+        </div>
+
+        <div id="kanban-view" class="hidden flex-grow flex flex-col">
+            <header class="p-4 flex justify-between items-center z-10 flex-shrink-0">
+                <div>
+                    <h1 id="board-name-header" class="text-2xl font-bold text-gray-900"></h1>
+                    <p class="text-sm text-gray-500">Board ID: <code id="board-id-display" class="bg-gray-200/50 p-1 rounded cursor-pointer" title="Click to copy"></code></p>
+                </div>
+                <div class="flex items-center gap-4">
+                     <button id="show-notifications-btn" class="relative p-2 rounded-full hover:bg-black/5 transition-colors">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-gray-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                           <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                        </svg>
+                        <span id="notification-dot" class="hidden absolute top-1 right-1 h-3 w-3 rounded-full bg-red-500 border-2 border-white"></span>
+                     </button>
+                    <button id="change-board-btn" class="text-sm text-indigo-600 hover:text-indigo-800 font-semibold transition-colors">Change Board</button>
+                </div>
+            </header>
+
+            <div id="notification-panel" class="hidden absolute top-20 right-4 w-80 bg-white rounded-lg shadow-xl border p-4 z-40 max-h-96 overflow-y-auto transition-transform transform origin-top-right">
+                <h3 class="font-bold mb-2">Recent Activity</h3>
+                <div id="notification-list" class="space-y-2">
+                    <p class="text-gray-500 text-sm">No new notifications.</p>
+                </div>
+            </div>
+
+            <main id="kanban-board-container" class="kanban-board flex-grow"></main>
+        </div>
+    </div>
+
+    <div id="task-details-modal" class="modal-backdrop hidden">
+        <div class="modal max-h-[90vh] overflow-y-auto">
+             <form id="task-details-form">
+                <input type="hidden" id="task-id-input">
+                <div class="mb-4">
+                    <label for="details-task-title" class="block text-sm font-medium text-gray-700">Title</label>
+                    <input type="text" id="details-task-title" required class="mt-1 block w-full px-3 py-2 rounded-md shadow-sm focus:outline-none modern-input">
+                </div>
+                <div class="mb-6">
+                    <label for="details-task-desc" class="block text-sm font-medium text-gray-700">Description</label>
+                    <textarea id="details-task-desc" rows="3" class="mt-1 block w-full px-3 py-2 rounded-md shadow-sm focus:outline-none modern-input"></textarea>
+                </div>
+                <div class="mb-6">
+                    <label for="details-task-assignee" class="block text-sm font-medium text-gray-700">Assign To (User ID)</label>
+                    <input type="text" id="details-task-assignee" placeholder="Optional: Paste User ID" class="mt-1 block w-full px-3 py-2 rounded-md shadow-sm focus:outline-none modern-input">
+                </div>
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                     <div>
+                         <label for="details-task-due-date" class="block text-sm font-medium text-gray-700">Due Date</label>
+                         <input type="date" id="details-task-due-date" class="mt-1 block w-full px-3 py-2 rounded-md shadow-sm focus:outline-none modern-input">
+                     </div>
+                     <div>
+                         <label for="details-task-priority" class="block text-sm font-medium text-gray-700">Priority</label>
+                         <select id="details-task-priority" class="mt-1 block w-full px-3 py-2 border bg-white rounded-md shadow-sm focus:outline-none modern-input">
+                             <option>Low</option>
+                             <option>Medium</option>
+                             <option>High</option>
+                         </select>
+                     </div>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Color Tag</label>
+                    <div id="details-task-color-picker" class="flex flex-wrap gap-3">
+                        <span class="color-dot bg-gray-400" data-color="gray" title="Gray"></span>
+                        <span class="color-dot bg-red-500" data-color="red" title="Red"></span>
+                        <span class="color-dot bg-orange-500" data-color="orange" title="Orange"></span>
+                        <span class="color-dot bg-yellow-500" data-color="yellow" title="Yellow"></span>
+                        <span class="color-dot bg-green-500" data-color="green" title="Green"></span>
+                        <span class="color-dot bg-blue-500" data-color="blue" title="Blue"></span>
+                        <span class="color-dot bg-purple-500" data-color="purple" title="Purple"></span>
+                    </div>
+                </div>
+                <div class="mb-6">
+                     <label class="block text-sm font-medium text-gray-700 mb-2">Subtasks</label>
+                     <div id="subtasks-list" class="space-y-2 mb-2"></div>
+                     <div class="flex gap-2">
+                        <input type="text" id="new-subtask-input" placeholder="Add a subtask..." class="flex-grow px-3 py-2 rounded-md shadow-sm focus:outline-none modern-input">
+                        <button type="button" id="add-subtask-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Add</button>
+                     </div>
+                </div>
+                <div class="mb-6">
+                     <label class="block text-sm font-medium text-gray-700 mb-2">Attachments (Links)</label>
+                     <div id="attachments-list" class="space-y-2 mb-2"></div>
+                     <div class="flex gap-2">
+                        <input type="url" id="new-attachment-url" placeholder="https://example.com" class="flex-grow px-3 py-2 rounded-md shadow-sm focus:outline-none modern-input">
+                        <button type="button" id="add-attachment-btn" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Add Link</button>
+                     </div>
+                </div>
+                <div class="flex justify-between items-center mt-8">
+                    <button type="button" id="delete-task-btn" class="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700">Delete Task</button>
+                    <div class="flex gap-4">
+                        <button type="button" id="cancel-edit-task" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Cancel</button>
+                        <button type="submit" class="modern-btn primary px-4 py-2">Save Changes</button>
+                    </div>
+                </div>
+             </form>
+        </div>
+    </div>
+
+    <div id="add-task-modal" class="modal-backdrop hidden">
+        <div class="modal">
+            <h2 class="text-2xl font-bold mb-4">Add New Task</h2>
+            <form id="add-task-form">
+                <div class="mb-4">
+                    <label for="task-title" class="block text-sm font-medium text-gray-700">Title</label>
+                    <input type="text" id="task-title" required class="mt-1 block w-full px-3 py-2 rounded-md shadow-sm focus:outline-none modern-input">
+                </div>
+                <div class="mb-6">
+                    <label for="task-desc" class="block text-sm font-medium text-gray-700">Description</label>
+                    <textarea id="task-desc" rows="3" class="mt-1 block w-full px-3 py-2 rounded-md shadow-sm focus:outline-none modern-input"></textarea>
+                </div>
+                 <div class="mb-6">
+                    <label for="task-assignee" class="block text-sm font-medium text-gray-700">Assign To (User ID)</label>
+                    <input type="text" id="task-assignee" placeholder="Optional: Paste User ID" class="mt-1 block w-full px-3 py-2 rounded-md shadow-sm focus:outline-none modern-input">
+                </div>
+                <div class="grid grid-cols-2 gap-4 mb-6">
+                     <div>
+                         <label for="task-due-date" class="block text-sm font-medium text-gray-700">Due Date</label>
+                         <input type="date" id="task-due-date" class="mt-1 block w-full px-3 py-2 rounded-md shadow-sm focus:outline-none modern-input">
+                     </div>
+                     <div>
+                         <label for="task-priority" class="block text-sm font-medium text-gray-700">Priority</label>
+                         <select id="task-priority" class="mt-1 block w-full px-3 py-2 border bg-white rounded-md shadow-sm focus:outline-none modern-input">
+                             <option>Low</option>
+                             <option selected>Medium</option>
+                             <option>High</option>
+                         </select>
+                     </div>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">Color Tag</label>
+                    <div id="task-color-picker" class="flex flex-wrap gap-3">
+                        <span class="color-dot bg-gray-400" data-color="gray" title="Gray"></span>
+                        <span class="color-dot bg-red-500" data-color="red" title="Red"></span>
+                        <span class="color-dot bg-orange-500" data-color="orange" title="Orange"></span>
+                        <span class="color-dot bg-yellow-500" data-color="yellow" title="Yellow"></span>
+                        <span class="color-dot bg-green-500" data-color="green" title="Green"></span>
+                        <span class="color-dot bg-blue-500" data-color="blue" title="Blue"></span>
+                        <span class="color-dot bg-purple-500" data-color="purple" title="Purple"></span>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-4">
+                    <button type="button" id="cancel-add-task" class="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300">Cancel</button>
+                    <button type="submit" class="modern-btn primary px-4 py-2">Add Task</button>
+                </div>
+            </form>
+        </div>
+    </div>
+    
+    <script type="module" src="script.js"></script>
+</body>
+</html>                          
